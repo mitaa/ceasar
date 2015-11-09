@@ -107,3 +107,37 @@ fn main() {
         }
     };
 }
+
+
+
+macro_rules! reftest {
+    ($plain: expr, $cipher: expr, 13) => ({
+        let mut cipher = Vec::new();
+        let mut cipher1 = Vec::new();
+        transform(&mut cipher, $plain.as_bytes(), 13);
+        assert_eq!($cipher, std::str::from_utf8(&cipher).unwrap());
+
+        transform(&mut cipher1, &cipher[..], 13);
+        assert_eq!($plain, std::str::from_utf8(&cipher1).unwrap());
+    });
+    ($plain: expr, $cipher: expr, $shift: expr) => ({
+        let mut cipher = Vec::new();
+        transform(&mut cipher, $plain.as_bytes(), $shift);
+        assert_eq!($cipher, std::str::from_utf8(&cipher).unwrap());
+    })
+}
+
+#[test]
+fn alphabet() {
+    reftest!("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "XYZABCDEFGHIJKLMNOPQRSTUVW", 23);
+    reftest!(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+        "NOPQRSTUVWXYZABCDEFGHIJKLMnopqrstuvwxyzabcdefghijklm", 13
+    );
+}
+
+#[test]
+fn storytime() {
+    reftest!("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG", "QEB NRFZH YOLTK CLU GRJMP LSBO QEB IXWV ALD", -3);
+    reftest!("defend the east wall of the castle", "efgfoe uif fbtu xbmm pg uif dbtumf", 1);
+}
