@@ -4,15 +4,18 @@ use std::io::{
     Write,
 };
 
-extern crate getopts;
-use getopts::Options;
 use std::env;
 
 const A_MAX: u8 = 26;
 
-fn print_usage(program: &str, opts: Options) {
-    let brief = format!("Usage: {} FILE [options]", program);
-    print!("{}", opts.usage(&brief));
+fn print_usage(program: &str) {
+    let brief = format!("Usage: {} SHIFT [PLAINTEXT] [options]", program);
+    print!(
+"Usage: {} SHIFT [PLAINTEXT] [options]
+
+Options:
+    -h, --help      print this help menu
+", program);
 }
 
 fn transform<C: Read, O: Write>(mut pipe: O, ctext: C, mut shift: i8) {
@@ -50,42 +53,20 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let program = args[0].clone();
 
-    let mut opts = Options::new();
-    opts.optflag("h", "help", "print this help menu");
-    opts.optopt("i", "input", "input plaintext", "INPUT");
-    opts.optopt("s", "shift", "shift value", "SHIFT");
-
-    let matches = match opts.parse(&args[1..]) {
-        Ok(m) => { m }
-        Err(f) => {
-            println!("{}", f.to_string());
-            print_usage(&program, opts);
-            return;
-        }
-    };
-
-    if matches.opt_present("h") {
-        print_usage(&program, opts);
+    if args[1..].iter().map(|s|&s[..]).any(|s| s == "-h" || s == "--help") || args.len() <= 1 {
+        print_usage(&program);
         return;
     }
 
-    let shift: i8 = match matches.opt_str("shift") {
-        Some(shift) => {
-            match shift.parse() {
-                Ok(v) => v,
-                Err(f) => {
-                    println!("cannot parse shift value: `{}` ({})", shift, f.to_string());
-                    return;
-                },
-            }
-        },
-        None => {
-            print_usage(&program, opts);
+    let shift: i8 = match args[1].parse() {
+        Ok(v) => v,
+        Err(f) => {
+            println!("cannot parse shift value: `{}` ({})", args[1], f.to_string());
             return;
-        }
+        },
     };
 
-    match matches.opt_str("input") {
+    match args.get(2) {
         Some(input) => {
             let mut pipe = std::io::stdout();
             transform(&mut pipe, input.as_bytes(), shift);
