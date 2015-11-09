@@ -89,7 +89,6 @@ mod tests {
     use self::test::Bencher;
     use super::{std, transform};
     use std::fs::File;
-    use std::io::Read;
 
     macro_rules! reftest {
         ($plain: expr, $cipher: expr, 13) => ({
@@ -126,18 +125,12 @@ mod tests {
     #[bench]
     fn lorem_ipsum_stdout(b: &mut Bencher) {
         let mut f = File::open("aux/lorem_ipsum").unwrap();
-        let mut plaintext = String::new();
-        f.read_to_string(&mut plaintext).unwrap();
-
-        b.iter(|| transform(std::io::stdout(), plaintext.as_bytes(), 13));
+        b.iter(|| transform(std::io::stdout(), &mut f, 13));
     }
 
     #[bench]
     fn lorem_ipsum_string(b: &mut Bencher) {
         let mut f = File::open("aux/lorem_ipsum").unwrap();
-        let mut plaintext = String::new();
-        f.read_to_string(&mut plaintext).unwrap();
-
-        b.iter(|| transform(&mut Vec::new(), plaintext.as_bytes(), 13));
+        b.iter(|| transform(&mut Vec::new(), &mut f, 13));
     }
 }
