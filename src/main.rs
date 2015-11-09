@@ -8,12 +8,6 @@ extern crate getopts;
 use getopts::Options;
 use std::env;
 
-
-#[macro_use]
-extern crate log;
-extern crate env_logger;
-
-
 const A_MAX: u8 = 26;
 
 fn print_usage(program: &str, opts: Options) {
@@ -45,7 +39,7 @@ fn transform<C: Read, O: Write>(mut pipe: O, ctext: C, mut shift: i8) {
         }
 
         if let Err(f) = pipe.write(&[c]) {
-            error!("broken output pipe: {}", f.to_string());
+            println!("broken output pipe: {}", f.to_string());
             return;
         }
     }
@@ -53,8 +47,6 @@ fn transform<C: Read, O: Write>(mut pipe: O, ctext: C, mut shift: i8) {
 
 
 fn main() {
-    env_logger::init().unwrap();
-
     let args: Vec<String> = env::args().collect();
     let program = args[0].clone();
 
@@ -66,7 +58,7 @@ fn main() {
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => { m }
         Err(f) => {
-            error!("{}", f.to_string());
+            println!("{}", f.to_string());
             print_usage(&program, opts);
             return;
         }
@@ -82,7 +74,7 @@ fn main() {
             match shift.parse() {
                 Ok(v) => v,
                 Err(f) => {
-                    error!("cannot parse shift value: `{}` ({})", shift, f.to_string());
+                    println!("cannot parse shift value: `{}` ({})", shift, f.to_string());
                     return;
                 },
             }
@@ -98,7 +90,7 @@ fn main() {
             let mut pipe = std::io::stdout();
             transform(&mut pipe, input.as_bytes(), shift);
             if let Err(f) = pipe.write("\n".as_bytes()) {
-                error!("broken output pipe: {}", f.to_string());
+                println!("broken output pipe: {}", f.to_string());
             }
         }
         None => {

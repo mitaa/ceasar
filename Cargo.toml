@@ -4,8 +4,6 @@ version = "0.1.0"
 authors = ["mitaa <mitaa.ceb@gmail.com>"]
 
 [dependencies.getopts]
-[dependencies.env_logger]
-[dependencies.log]
 
 [profile.release]
 lto = true
