@@ -16,7 +16,7 @@ Options:
     -h, --help      print this help menu", program);
 }
 
-fn transform<C: Read, O: Write>(mut pipe: O, ctext: C, mut shift: i8) {
+fn transform<C: Read, O: Write>(mut pipe: O, plaintext: C, mut shift: i8) {
     while shift >= 26
         { shift -= 26; }
     while shift < 0
@@ -25,7 +25,7 @@ fn transform<C: Read, O: Write>(mut pipe: O, ctext: C, mut shift: i8) {
 
     let offset: u8 = shift as u8;
 
-    for cres in ctext.chars() {
+    for cres in plaintext.chars() {
         let mut c = cres.expect("this shouldn't happen...") as u8;
 
         match c as char {
