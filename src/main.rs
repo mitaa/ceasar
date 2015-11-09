@@ -8,39 +8,38 @@ use std::io::{
 
 use std::env;
 
-const A_MAX: u8 = 26;
-
 fn print_usage(program: &str) {
-    let brief = format!("Usage: {} SHIFT [PLAINTEXT] [options]", program);
-    print!(
+    println!(
 "Usage: {} SHIFT [PLAINTEXT] [options]
 
 Options:
-    -h, --help      print this help menu
-", program);
+    -h, --help      print this help menu", program);
 }
 
 fn transform<C: Read, O: Write>(mut pipe: O, ctext: C, mut shift: i8) {
-    while shift >= A_MAX as i8
-        { shift -= A_MAX as i8; }
+    while shift >= 26
+        { shift -= 26; }
     while shift < 0
-        { shift += A_MAX as i8; }
-    debug_assert!(shift >= 0 && shift <= (A_MAX as i8));
+        { shift += 26; }
+    debug_assert!(shift >= 0 && shift <= 26);
 
     let offset: u8 = shift as u8;
 
     for cres in ctext.chars() {
         let mut c = cres.expect("this shouldn't happen...") as u8;
 
-        if c >= ('a' as u8) && c <= ('z' as u8) {
-            c += offset;
-            while c > ('z' as u8)
-                { c -= A_MAX; }
-
-        } else if c >= ('A' as u8) && c <= ('Z' as u8) {
-            c += offset;
-            while c > ('Z' as u8)
-                { c -= A_MAX }
+        match c as char {
+            'a' ... 'z' => {
+                c += offset;
+                if c > ('z' as u8)
+                    { c -= 26; }
+            }
+            'A' ... 'Z' => {
+                c += offset;
+                if c > ('Z' as u8)
+                    { c -= 26 }
+            }
+            _ => {}
         }
 
         if let Err(f) = pipe.write(&[c]) {
@@ -128,7 +127,7 @@ mod tests {
     fn lorem_ipsum_stdout(b: &mut Bencher) {
         let mut f = File::open("aux/lorem_ipsum").unwrap();
         let mut plaintext = String::new();
-        f.read_to_string(&mut plaintext);
+        f.read_to_string(&mut plaintext).unwrap();
 
         b.iter(|| transform(std::io::stdout(), plaintext.as_bytes(), 13));
     }
@@ -137,7 +136,7 @@ mod tests {
     fn lorem_ipsum_string(b: &mut Bencher) {
         let mut f = File::open("aux/lorem_ipsum").unwrap();
         let mut plaintext = String::new();
-        f.read_to_string(&mut plaintext);
+        f.read_to_string(&mut plaintext).unwrap();
 
         b.iter(|| transform(&mut Vec::new(), plaintext.as_bytes(), 13));
     }
