@@ -7,5 +7,5 @@ authors = ["mitaa <mitaa.ceb@gmail.com>"]
 [dependencies.env_logger]
 [dependencies.log]
 
-[profile]
+[profile.release]
 lto = true
