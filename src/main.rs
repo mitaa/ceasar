@@ -1,12 +1,19 @@
-#![feature(io)]
-#![feature(test)]
+#![feature(core_intrinsics)]
+#![cfg_attr(test, feature(test))]
 
 use std::io::{
     Read,
     Write,
 };
-
 use std::env;
+
+use std::intrinsics;
+use std::slice;
+
+
+extern crate unicode_segmentation;
+use unicode_segmentation::UnicodeSegmentation;
+
 
 fn print_usage(program: &str) {
     println!(
@@ -16,7 +23,7 @@ Options:
     -h, --help      print this help menu", program);
 }
 
-fn transform<C: Read, O: Write>(mut pipe: O, plaintext: C, mut shift: i8) {
+fn transform<O: Write>(mut pipe: O, plaintext: &str, mut shift: i8) {
     while shift >= 26
         { shift -= 26; }
     while shift < 0
@@ -24,25 +31,34 @@ fn transform<C: Read, O: Write>(mut pipe: O, plaintext: C, mut shift: i8) {
     debug_assert!(shift >= 0 && shift <= 26);
 
     let offset: u8 = shift as u8;
+    let mut c = b'\0';
 
-    for cres in plaintext.chars() {
-        let mut c = cres.expect("this shouldn't happen...") as u8;
-
-        match c as char {
-            'a' ... 'z' => {
-                c += offset;
-                if c > ('z' as u8)
-                    { c -= 26; }
+    for grapheme in plaintext.graphemes(true) {
+        let bytes = if grapheme.len() == 1 {
+            match grapheme.chars().next() {
+                Some(cres) => {
+                    match cres {
+                        'a' ... 'z' => {
+                            c = cres as u8 + offset;
+                            if c > ('z' as u8)
+                                { c -= 26; }
+                        }
+                        'A' ... 'Z' => {
+                            c = cres as u8 + offset;
+                            if c > ('Z' as u8)
+                                { c -= 26 }
+                        }
+                        _ => c = cres as u8
+                    }
+                    unsafe { slice::from_raw_parts(&c, 1) }
+                },
+                None => unsafe { intrinsics::unreachable() },
             }
-            'A' ... 'Z' => {
-                c += offset;
-                if c > ('Z' as u8)
-                    { c -= 26 }
-            }
-            _ => {}
-        }
+        } else {
+            grapheme.as_bytes()
+        };
 
-        if let Err(f) = pipe.write(&[c]) {
+        if let Err(f) = pipe.write(bytes) {
             println!("broken output pipe: {}", f.to_string());
             return;
         }
@@ -70,14 +86,16 @@ fn main() {
     match args.get(2) {
         Some(input) => {
             let mut pipe = std::io::stdout();
-            transform(&mut pipe, input.as_bytes(), shift);
+            transform(&mut pipe, input, shift);
             if let Err(f) = pipe.write("\n".as_bytes()) {
                 println!("broken output pipe: {}", f.to_string());
             }
         }
         None => {
             // let's for now assume a trailing newline in the input stream...
-            transform(std::io::stdout(), std::io::stdin(), shift);
+            let mut input = String::new();
+            std::io::stdin().read_to_string(&mut input).unwrap();
+            transform(std::io::stdout(), &input, shift);
         }
     };
 }
@@ -89,21 +107,22 @@ mod tests {
     use self::test::Bencher;
     use super::{std, transform};
     use std::fs::File;
+    use std::io::Read;
 
     macro_rules! reftest {
         ($plain: expr, $cipher: expr, 13) => ({
             let mut cipher = Vec::new();
             let mut cipher1 = Vec::new();
-            transform(&mut cipher, $plain.as_bytes(), 13);
-            assert_eq!($cipher, std::str::from_utf8(&cipher).unwrap());
+            transform(&mut cipher, $plain, 13);
+            assert_eq!($cipher.as_bytes(), &cipher[..]);
 
-            transform(&mut cipher1, &cipher[..], 13);
-            assert_eq!($plain, std::str::from_utf8(&cipher1).unwrap());
+            transform(&mut cipher1, std::str::from_utf8(&cipher).unwrap(), 13);
+            assert_eq!($plain.as_bytes(), &cipher1[..]);
         });
         ($plain: expr, $cipher: expr, $shift: expr) => ({
             let mut cipher = Vec::new();
-            transform(&mut cipher, $plain.as_bytes(), $shift);
-            assert_eq!($cipher, std::str::from_utf8(&cipher).unwrap());
+            transform(&mut cipher, $plain, $shift);
+            assert_eq!($cipher.as_bytes(), &cipher[..]);
         })
     }
 
@@ -124,13 +143,19 @@ mod tests {
 
     #[bench]
     fn lorem_ipsum_stdout(b: &mut Bencher) {
+        let mut input = String::new();
         let mut f = File::open("aux/lorem_ipsum").unwrap();
-        b.iter(|| transform(std::io::stdout(), &mut f, 13));
+        f.read_to_string(&mut input);
+
+        b.iter(|| transform(std::io::stdout(), &input, 13));
     }
 
     #[bench]
     fn lorem_ipsum_string(b: &mut Bencher) {
+        let mut input = String::new();
         let mut f = File::open("aux/lorem_ipsum").unwrap();
-        b.iter(|| transform(&mut Vec::new(), &mut f, 13));
+        f.read_to_string(&mut input);
+
+        b.iter(|| transform(&mut Vec::new(), &input, 13));
     }
 }

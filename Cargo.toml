@@ -3,5 +3,8 @@ name = "ceasar"
 version = "0.1.0"
 authors = ["mitaa <mitaa.ceb@gmail.com>"]
 
+[dependencies]
+unicode-segmentation = "*"
+
 [profile.release]
 lto = true
