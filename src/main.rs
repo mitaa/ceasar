@@ -92,7 +92,6 @@ fn main() {
             }
         }
         None => {
-            // let's for now assume a trailing newline in the input stream...
             let mut input = String::new();
             std::io::stdin().read_to_string(&mut input).unwrap();
             transform(std::io::stdout(), &input, shift);
