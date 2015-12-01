@@ -1,6 +1,7 @@
 #![cfg_attr(test, feature(test))]
 
 use std::io::{
+    self,
     Read,
     Write,
 };
@@ -21,7 +22,7 @@ Options:
     -h, --help      print this help menu", program);
 }
 
-fn transform<O: Write>(mut pipe: O, plaintext: &str, mut shift: i8) {
+fn transform<O: Write>(mut pipe: O, plaintext: &str, mut shift: i8) -> io::Result<usize> {
     while shift >= 26
         { shift -= 26; }
     while shift < 0
@@ -55,12 +56,9 @@ fn transform<O: Write>(mut pipe: O, plaintext: &str, mut shift: i8) {
         } else {
             grapheme.as_bytes()
         };
-
-        if let Err(f) = pipe.write(bytes) {
-            println!("broken output pipe: {}", f.to_string());
-            return;
-        }
+        try!(pipe.write(bytes).map(|_|()));
     }
+    Ok(0)
 }
 
 
@@ -81,20 +79,21 @@ fn main() {
         },
     };
 
-    match args.get(2) {
+    let status = match args.get(2) {
         Some(input) => {
             let mut pipe = std::io::stdout();
-            transform(&mut pipe, input, shift);
-            if let Err(f) = pipe.write("\n".as_bytes()) {
-                println!("broken output pipe: {}", f.to_string());
-            }
+            transform(&mut pipe, input, shift)
+            .and(pipe.write(b"\n"))
         }
         None => {
             let mut input = String::new();
-            std::io::stdin().read_to_string(&mut input).unwrap();
-            transform(std::io::stdout(), &input, shift);
+            std::io::stdin().read_to_string(&mut input)
+            .and(transform(std::io::stdout(), &input, shift))
         }
     };
+    if let Err(f) = status {
+        println!("broken pipe: {}", f.to_string());
+    }
 }
 
 #[cfg(test)]
