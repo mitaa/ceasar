@@ -143,7 +143,7 @@ mod tests {
     #[bench]
     fn lorem_ipsum_stdout(b: &mut Bencher) {
         let mut input = String::new();
-        let mut f = File::open("aux/lorem_ipsum").unwrap();
+        let mut f = File::open("auxiliary/lorem_ipsum").unwrap();
         f.read_to_string(&mut input);
 
         b.iter(|| transform(std::io::stdout(), &input, 13));
@@ -152,7 +152,7 @@ mod tests {
     #[bench]
     fn lorem_ipsum_string(b: &mut Bencher) {
         let mut input = String::new();
-        let mut f = File::open("aux/lorem_ipsum").unwrap();
+        let mut f = File::open("auxiliary/lorem_ipsum").unwrap();
         f.read_to_string(&mut input);
 
         b.iter(|| transform(&mut Vec::new(), &input, 13));
