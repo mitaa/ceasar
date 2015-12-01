@@ -1,4 +1,3 @@
-#![feature(core_intrinsics)]
 #![cfg_attr(test, feature(test))]
 
 use std::io::{
@@ -7,7 +6,6 @@ use std::io::{
 };
 use std::env;
 
-use std::intrinsics;
 use std::slice;
 
 
@@ -31,28 +29,28 @@ fn transform<O: Write>(mut pipe: O, plaintext: &str, mut shift: i8) {
     debug_assert!(shift >= 0 && shift <= 26);
 
     let offset: u8 = shift as u8;
+    // this will have to wait on `feature(stmt_expr_attributes)` (rust-lang/rust/pull/29850)
+    // #[allow(unused_assignments)]
     let mut c = b'\0';
 
     for grapheme in plaintext.graphemes(true) {
         let bytes = if grapheme.len() == 1 {
-            match grapheme.chars().next() {
-                Some(cres) => {
-                    match cres {
-                        'a' ... 'z' => {
-                            c = cres as u8 + offset;
-                            if c > ('z' as u8)
-                                { c -= 26; }
-                        }
-                        'A' ... 'Z' => {
-                            c = cres as u8 + offset;
-                            if c > ('Z' as u8)
-                                { c -= 26 }
-                        }
-                        _ => c = cres as u8
+            unsafe {
+                let cres = *grapheme.as_bytes().get_unchecked(0) as char;
+                match cres {
+                    'a' ... 'z' => {
+                        c = cres as u8 + offset;
+                        if c > ('z' as u8)
+                            { c -= 26; }
                     }
-                    unsafe { slice::from_raw_parts(&c, 1) }
-                },
-                None => unsafe { intrinsics::unreachable() },
+                    'A' ... 'Z' => {
+                        c = cres as u8 + offset;
+                        if c > ('Z' as u8)
+                            { c -= 26 }
+                    }
+                    _ => c = cres as u8
+                }
+                slice::from_raw_parts(&c, 1)
             }
         } else {
             grapheme.as_bytes()
