@@ -40,12 +40,12 @@ fn transform<O: Write>(mut pipe: O, plaintext: &str, mut shift: i8) {
                 match cres {
                     'a' ... 'z' => {
                         c = cres as u8 + offset;
-                        if c > ('z' as u8)
+                        if c > b'z'
                             { c -= 26; }
                     }
                     'A' ... 'Z' => {
                         c = cres as u8 + offset;
-                        if c > ('Z' as u8)
+                        if c > b'Z'
                             { c -= 26 }
                     }
                     _ => c = cres as u8
