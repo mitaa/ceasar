@@ -1,4 +1,5 @@
 #![cfg_attr(test, feature(test))]
+#![feature(stmt_expr_attributes)]
 
 use std::io::{
     self,
@@ -22,17 +23,20 @@ Options:
     -h, --help      print this help menu", program);
 }
 
-fn transform<O: Write>(mut pipe: O, plaintext: &str, mut shift: i8) -> io::Result<usize> {
-    while shift >= 26
-        { shift -= 26; }
-    while shift < 0
-        { shift += 26; }
-    debug_assert!(shift >= 0 && shift <= 26);
+fn transform<O: Write>(mut pipe: O, plaintext: &str, ishift: i8) -> io::Result<usize> {
+    // Wrap shift value to 0...26 so we
+    //  -only have to worry about the upper bound
+    //  -only need to wrap around a single time without checking
+    let shift = if ishift >= 0 {
+        ishift % 26
+    } else {
+        26 + (ishift % 26)
+    };
 
-    let offset: u8 = shift as u8;
-    // this will have to wait on `feature(stmt_expr_attributes)` (rust-lang/rust/pull/29850)
-    // #[allow(unused_assignments)]
+    #[allow(unused_assignments)]
     let mut c = b'\0';
+    let offset: u8 = shift as u8;
+
 
     for grapheme in plaintext.graphemes(true) {
         let bytes = if grapheme.len() == 1 {
